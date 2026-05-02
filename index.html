@@ -819,15 +819,21 @@
             performSynthesis(gameState.selectedCell, clickedPos);
         }
 
+        function gameOver() {
+            gameState.gameStatus = 'lost';
+            selectedItem = null;
+            if (comboTimeout) {
+                clearTimeout(comboTimeout);
+                comboTimeout = null;
+            }
+            render();
+        }
+
         function decrementSteps() {
             gameState.steps = gameState.steps - 1;
             if (gameState.steps <= 0) {
-                gameState.gameStatus = 'lost';
-                selectedItem = null;
-                if (comboTimeout) {
-                    clearTimeout(comboTimeout);
-                    comboTimeout = null;
-                }
+                gameOver();
+                return;
             }
             return gameState.steps;
         }
@@ -884,6 +890,9 @@
                 }
             } else {
                 decrementSteps();
+                if (gameState.gameStatus === 'lost') {
+                    return;
+                }
             }
 
             render();
@@ -965,8 +974,13 @@
                                     clearTimeout(comboTimeout);
                                     comboTimeout = null;
                                 }
+                                render();
+                                return;
                             } else {
                                 decrementSteps();
+                                if (gameState.gameStatus === 'lost') {
+                                    return;
+                                }
                             }
                         }
                     }
@@ -986,6 +1000,9 @@
                         gameState.selectedCell = null;
                         gameState.combo = 0;
                         decrementSteps();
+                        if (gameState.gameStatus === 'lost') {
+                            return;
+                        }
                     }
                     break;
                 }
@@ -1007,6 +1024,9 @@
                         gameState.selectedCell = null;
                         gameState.combo = 0;
                         decrementSteps();
+                        if (gameState.gameStatus === 'lost') {
+                            return;
+                        }
                     }
                     break;
                 }
