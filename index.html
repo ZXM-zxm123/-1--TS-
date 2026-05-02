@@ -819,7 +819,28 @@
             performSynthesis(gameState.selectedCell, clickedPos);
         }
 
+        function gameOver() {
+            gameState.gameStatus = 'lost';
+            selectedItem = null;
+            if (comboTimeout) {
+                clearTimeout(comboTimeout);
+                comboTimeout = null;
+            }
+            render();
+        }
+
+        function decrementSteps() {
+            gameState.steps = gameState.steps - 1;
+            if (gameState.steps <= 0) {
+                gameOver();
+                return;
+            }
+            return gameState.steps;
+        }
+
         function performSynthesis(pos1, pos2) {
+            if (gameState.gameStatus !== 'playing') return;
+
             const cell1 = gameState.grid[pos1.row][pos1.col];
             const cell2 = gameState.grid[pos2.row][pos2.col];
 
@@ -854,7 +875,6 @@
 
             gameState.grid = newGrid;
             gameState.selectedCell = null;
-            gameState.steps = gameState.steps - 1;
             gameState.score = newScore;
             gameState.combo = newCombo;
             gameState.currentTargetProgress = newProgress;
@@ -863,8 +883,16 @@
             if (newProgress >= gameState.targetCount) {
                 gameState.gameStatus = 'won';
                 updateFastestTime(gameState.level, gameState.steps);
-            } else if (gameState.steps <= 0) {
-                gameState.gameStatus = 'lost';
+                selectedItem = null;
+                if (comboTimeout) {
+                    clearTimeout(comboTimeout);
+                    comboTimeout = null;
+                }
+            } else {
+                decrementSteps();
+                if (gameState.gameStatus === 'lost') {
+                    return;
+                }
             }
 
             render();
@@ -903,7 +931,7 @@
         }
 
         function handleItemUse(pos, cell) {
-            if (!selectedItem) return;
+            if (!selectedItem || gameState.gameStatus !== 'playing') return;
 
             let newGrid = cloneGrid(gameState.grid);
             let itemUsed = false;
@@ -930,23 +958,30 @@
                                 newProgress += 1;
                             }
 
-                            const newSteps = gameState.steps - 1;
-                            let newStatus = gameState.gameStatus;
-                            if (newProgress >= gameState.targetCount) {
-                                newStatus = 'won';
-                            } else if (newSteps <= 0) {
-                                newStatus = 'lost';
-                            }
-
                             gameState.grid = newGrid;
                             gameState.items = gameState.items.map(i =>
                                 i.type === 'speedMelt' ? { ...i, count: i.count - 1 } : i
                             );
                             gameState.selectedCell = null;
-                            gameState.steps = newSteps;
                             gameState.combo = 0;
                             gameState.currentTargetProgress = newProgress;
-                            gameState.gameStatus = newStatus;
+
+                            if (newProgress >= gameState.targetCount) {
+                                gameState.gameStatus = 'won';
+                                updateFastestTime(gameState.level, gameState.steps);
+                                selectedItem = null;
+                                if (comboTimeout) {
+                                    clearTimeout(comboTimeout);
+                                    comboTimeout = null;
+                                }
+                                render();
+                                return;
+                            } else {
+                                decrementSteps();
+                                if (gameState.gameStatus === 'lost') {
+                                    return;
+                                }
+                            }
                         }
                     }
                     break;
@@ -963,9 +998,11 @@
                             i.type === 'precision' ? { ...i, count: i.count - 1 } : i
                         );
                         gameState.selectedCell = null;
-                        gameState.steps = gameState.steps - 1;
                         gameState.combo = 0;
-                        gameState.gameStatus = gameState.steps <= 0 ? 'lost' : gameState.gameStatus;
+                        decrementSteps();
+                        if (gameState.gameStatus === 'lost') {
+                            return;
+                        }
                     }
                     break;
                 }
@@ -985,9 +1022,11 @@
                             i.type === 'shield' ? { ...i, count: i.count - 1 } : i
                         );
                         gameState.selectedCell = null;
-                        gameState.steps = gameState.steps - 1;
                         gameState.combo = 0;
-                        gameState.gameStatus = gameState.steps <= 0 ? 'lost' : gameState.gameStatus;
+                        decrementSteps();
+                        if (gameState.gameStatus === 'lost') {
+                            return;
+                        }
                     }
                     break;
                 }
