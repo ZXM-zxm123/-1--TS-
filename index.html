@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>熔炉锻造 - Forge Master</title>
+    <style>
+        :root {
+            --background: #1a0a0a;
+            --grid-line: #4a1a0a;
+            --highlight: #ff4500;
+            --text: #ffaa00;
+            --cell: #2a1515;
+            --cell-border: #3a2020;
+        }
+
+        .theme-lava {
+            --background: #1a0a0a;
+            --grid-line: #4a1a0a;
+            --highlight: #ff4500;
+            --text: #ffaa00;
+            --cell: #2a1515;
+            --cell-border: #3a2020;
+        }
+
+        .theme-coldIron {
+            --background: #0a1a2a;
+            --grid-line: #2a4a6a;
+            --highlight: #00bfff;
+            --text: #88ccff;
+            --cell: #152535;
+            --cell-border: #253545;
+        }
+
+        .theme-gold {
+            --background: #1a1a0a;
+            --grid-line: #4a4a1a;
+            --highlight: #ffd700;
+            --text: #ffee00;
+            --cell: #252515;
+            --cell-border: #353525;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .game-container {
+            max-width: 500px;
+            width: 100%;
+            background: var(--background);
+            border: 2px solid var(--grid-line);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .game-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--highlight);
+            text-shadow: 0 0 10px var(--highlight);
+            margin-bottom: 5px;
+        }
+
+        .level-indicator {
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            background: var(--cell);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid var(--grid-line);
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text);
+            opacity: 0.8;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--highlight);
+        }
+
+        .combo-display {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: var(--highlight);
+            text-shadow: 0 0 20px var(--highlight);
+            animation: comboPopup 1s ease-out forwards;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        @keyframes comboPopup {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(0.5);
+            }
+            50% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(1) translateY(-50px);
+            }
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+            background: var(--grid-line);
+            padding: 4px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: var(--cell);
+            border: 2px solid var(--cell-border);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cell:hover {
+            transform: scale(1.05);
+            border-color: var(--highlight);
+            box-shadow: 0 0 10px var(--highlight);
+        }
+
+        .cell.selected {
+            border-color: var(--highlight);
+            box-shadow: 0 0 15px var(--highlight), inset 0 0 10px rgba(255, 165, 0, 0.2);
+            animation: pulse 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            from {
+                box-shadow: 0 0 10px var(--highlight), inset 0 0 5px rgba(255, 165, 0, 0.1);
+            }
+            to {
+                box-shadow: 0 0 20px var(--highlight), inset 0 0 15px rgba(255, 165, 0, 0.3);
+            }
+        }
+
+        .cell.metal {
+            animation: metalShine 3s ease-in-out infinite;
+        }
+
+        @keyframes metalShine {
+            0%, 100% {
+                filter: brightness(1);
+            }
+            50% {
+                filter: brightness(1.2);
+            }
+        }
+
+        .cell.impurity {
+            background: linear-gradient(135deg, #3a3a3a 25%, #2a2a2a 50%, #3a3a3a 75%);
+            animation: impurityShake 0.5s ease-in-out infinite;
+        }
+
+        @keyframes impurityShake {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            25% {
+                transform: translateX(-1px);
+            }
+            75% {
+                transform: translateX(1px);
+            }
+        }
+
+        .metal-symbol {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .metal-name {
+            font-size: 8px;
+            margin-top: 2px;
+        }
+
+        .sparks-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .spark {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: radial-gradient(circle, #ffd700 0%, #ff4500 50%, transparent 70%);
+            border-radius: 50%;
+            animation: sparkFly 0.5s ease-out forwards;
+        }
+
+        @keyframes sparkFly {
+            0% {
+                opacity: 1;
+                transform: scale(1) translate(0, 0);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0) translate(var(--dx), var(--dy));
+            }
+        }
+
+        .target-bar {
+            background: var(--cell);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid var(--grid-line);
+            text-align: center;
+        }
+
+        .target-label {
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .target-progress {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .target-metal {
+            padding: 5px 15px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .items-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+
+        .item {
+            background: var(--cell);
+            border: 2px solid var(--cell-border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 60px;
+        }
+
+        .item:hover:not(.disabled) {
+            border-color: var(--highlight);
+            transform: scale(1.05);
+        }
+
+        .item.selected {
+            border-color: var(--highlight);
+            box-shadow: 0 0 10px var(--highlight);
+            background: rgba(255, 165, 0, 0.1);
+        }
+
+        .item.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .item-icon {
+            font-size: 24px;
+        }
+
+        .item-count {
+            font-size: 10px;
+            margin-top: 2px;
+        }
+
+        .item-name {
+            font-size: 8px;
+            margin-top: 2px;
+        }
+
+        .actions-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+
+        .btn {
+            background: var(--cell);
+            border: 2px solid var(--grid-line);
+            border-radius: 8px;
+            padding: 10px 20px;
+            color: var(--text);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            border-color: var(--highlight);
+            box-shadow: 0 0 10px var(--highlight);
+        }
+
+        .themes-bar {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        .theme-btn {
+            background: transparent;
+            border: 2px solid var(--grid-line);
+            border-radius: 8px;
+            padding: 8px 15px;
+            color: var(--text);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .theme-btn:hover {
+            border-color: var(--highlight);
+        }
+
+        .theme-btn.active {
+            border-color: var(--highlight);
+            box-shadow: 0 0 10px var(--highlight);
+            background: rgba(255, 165, 0, 0.1);
+        }
+
+        .level-select {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        .level-btn {
+            background: var(--cell);
+            border: 2px solid var(--grid-line);
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            color: var(--text);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .level-btn:hover {
+            border-color: var(--highlight);
+        }
+
+        .level-btn.active {
+            border-color: var(--highlight);
+            box-shadow: 0 0 10px var(--highlight);
+            background: rgba(255, 165, 0, 0.2);
+        }
+
+        .level-btn.completed {
+            background: rgba(0, 255, 0, 0.1);
+            border-color: #00ff00;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: var(--cell);
+            border: 2px solid var(--highlight);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            max-width: 350px;
+            box-shadow: 0 0 30px var(--highlight);
+        }
+
+        .modal-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--highlight);
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px var(--highlight);
+        }
+
+        .modal-text {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .modal-score {
+            font-size: 24px;
+            color: var(--highlight);
+            margin-bottom: 20px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .fastest-time {
+            font-size: 12px;
+            color: #00ff00;
+            margin-top: 5px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .synthesis-animation {
+            animation: synthesisEffect 0.3s ease-out;
+        }
+
+        @keyframes synthesisEffect {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.3);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script>
+        const GRID_SIZE = 5;
+        const MAX_STEPS = 40;
+
+        const METAL_ORDER = ['copper', 'iron', 'silver', 'gold', 'mithril', 'orichalcum'];
+
+        const METAL_INFO = {
+            copper: { name: '铜', color: '#B87333', symbol: 'Cu', level: 1 },
+            iron: { name: '铁', color: '#A19D94', symbol: 'Fe', level: 2 },
+            silver: { name: '银', color: '#C0C0C0', symbol: 'Ag', level: 3 },
+            gold: { name: '金', color: '#FFD700', symbol: 'Au', level: 4 },
+            mithril: { name: '秘银', color: '#7B68EE', symbol: 'Mi', level: 5 },
+            orichalcum: { name: '奥利哈钢', color: '#00CED1', symbol: 'Or', level: 6 },
+        };
+
+        const LEVELS = [
+            { level: 1, targetMetal: 'iron', targetCount: 1, initialCopperCount: 15, impurityCount: 2 },
+            { level: 2, targetMetal: 'silver', targetCount: 1, initialCopperCount: 18, impurityCount: 3 },
+            { level: 3, targetMetal: 'gold', targetCount: 1, initialCopperCount: 20, impurityCount: 4 },
+            { level: 4, targetMetal: 'mithril', targetCount: 1, initialCopperCount: 20, impurityCount: 5 },
+            { level: 5, targetMetal: 'orichalcum', targetCount: 1, initialCopperCount: 20, impurityCount: 6 },
+        ];
+
+        const ITEM_INFO = {
+            speedMelt: { name: '加速融化', icon: '🔥' },
+            precision: { name: '精准定位', icon: '🔄' },
+            shield: { name: '保护罩', icon: '🛡️' },
+        };
+
+        const THEMES = {
+            lava: {
+                name: '熔岩',
+                colors: {
+                    background: '#1a0a0a',
+                    gridLine: '#4a1a0a',
+                    highlight: '#ff4500',
+                    text: '#ffaa00',
+                    cell: '#2a1515',
+                    cellBorder: '#3a2020',
+                },
+            },
+            coldIron: {
+                name: '寒铁',
+                colors: {
+                    background: '#0a1a2a',
+                    gridLine: '#2a4a6a',
+                    highlight: '#00bfff',
+                    text: '#88ccff',
+                    cell: '#152535',
+                    cellBorder: '#253545',
+                },
+            },
+            gold: {
+                name: '黄金',
+                colors: {
+                    background: '#1a1a0a',
+                    gridLine: '#4a4a1a',
+                    highlight: '#ffd700',
+                    text: '#ffee00',
+                    cell: '#252515',
+                    cellBorder: '#353525',
+                },
+            },
+        };
+
+        const STORAGE_KEY = 'forge-master-data';
+
+        let gameState = {
+            grid: [],
+            selectedCell: null,
+            steps: MAX_STEPS,
+            score: 0,
+            combo: 0,
+            level: 1,
+            items: [],
+            targetMetal: 'iron',
+            targetCount: 1,
+            currentTargetProgress: 0,
+            gameStatus: 'playing',
+            theme: 'lava',
+            fastestTimes: {},
+            isAnimating: false,
+        };
+
+        let selectedItem = null;
+        let comboDisplay = 0;
+        let comboTimeout = null;
+
+        function generateId() {
+            return Math.random().toString(36).substr(2, 9);
+        }
+
+        function createEmptyCell() {
+            return { type: 'empty', id: generateId() };
+        }
+
+        function createMetalCell(metalType) {
+            return { type: metalType, metalType, id: generateId() };
+        }
+
+        function createImpurityCell() {
+            return { type: 'impurity', id: generateId() };
+        }
+
+        function getNextMetalType(metal) {
+            const currentIndex = METAL_ORDER.indexOf(metal);
+            if (currentIndex === -1 || currentIndex >= METAL_ORDER.length - 1) {
+                return null;
+            }
+            return METAL_ORDER[currentIndex + 1];
+        }
+
+        function areAdjacent(pos1, pos2) {
+            const rowDiff = Math.abs(pos1.row - pos2.row);
+            const colDiff = Math.abs(pos1.col - pos2.col);
+            return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+        }
+
+        function getAdjacentCells(grid, pos) {
+            const adjacent = [];
+            const directions = [
+                { row: -1, col: 0 },
+                { row: 1, col: 0 },
+                { row: 0, col: -1 },
+                { row: 0, col: 1 },
+            ];
+
+            for (const dir of directions) {
+                const newRow = pos.row + dir.row;
+                const newCol = pos.col + dir.col;
+                if (newRow >= 0 && newRow < GRID_SIZE && newCol >= 0 && newCol < GRID_SIZE) {
+                    adjacent.push({ row: newRow, col: newCol });
+                }
+            }
+
+            return adjacent;
+        }
+
+        function initializeGrid(initialCopperCount, impurityCount) {
+            const grid = [];
+            const totalCells = GRID_SIZE * GRID_SIZE;
+            const filledCells = [];
+
+            for (let i = 0; i < totalCells - initialCopperCount - impurityCount; i++) {
+                filledCells.push(0);
+            }
+            for (let i = 0; i < initialCopperCount; i++) {
+                filledCells.push(1);
+            }
+            for (let i = 0; i < impurityCount; i++) {
+                filledCells.push(2);
+            }
+
+            for (let i = filledCells.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [filledCells[i], filledCells[j]] = [filledCells[j], filledCells[i]];
+            }
+
+            let cellIndex = 0;
+            for (let row = 0; row < GRID_SIZE; row++) {
+                grid[row] = [];
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    const cellValue = filledCells[cellIndex++];
+                    if (cellValue === 0) {
+                        grid[row][col] = createEmptyCell();
+                    } else if (cellValue === 1) {
+                        grid[row][col] = createMetalCell('copper');
+                    } else {
+                        grid[row][col] = createImpurityCell();
+                    }
+                }
+            }
+
+            return grid;
+        }
+
+        function cloneGrid(grid) {
+            return grid.map(row => row.map(cell => ({ ...cell })));
+        }
+
+        function saveGameData(data) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function loadGameData() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    return JSON.parse(saved);
+                } catch (e) {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        function updateFastestTime(level, steps) {
+            const data = loadGameData();
+            const fastestTimes = data?.fastestTimes || {};
+            if (!fastestTimes[level] || steps < fastestTimes[level]) {
+                fastestTimes[level] = steps;
+                saveGameData({ fastestTimes, selectedTheme: data?.selectedTheme || 'lava' });
+                return true;
+            }
+            return false;
+        }
+
+        function findSynthesizablePair(grid) {
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    const cell = grid[row][col];
+                    if (cell.type !== 'metal' || !cell.metalType) continue;
+
+                    const adjacent = getAdjacentCells(grid, { row, col });
+                    for (const adj of adjacent) {
+                        const adjCell = grid[adj.row][adj.col];
+                        if (adjCell.type === 'metal' && adjCell.metalType === cell.metalType) {
+                            const nextMetal = getNextMetalType(cell.metalType);
+                            if (nextMetal) {
+                                return {
+                                    pair: [{ row, col }, adj],
+                                    newMetal: nextMetal,
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        function createInitialState(level, theme) {
+            const levelConfig = LEVELS[level - 1];
+            const initialItems = [
+                { type: 'speedMelt', ...ITEM_INFO.speedMelt, count: 2 },
+                { type: 'precision', ...ITEM_INFO.precision, count: 2 },
+                { type: 'shield', ...ITEM_INFO.shield, count: 1 },
+            ];
+            return {
+                grid: initializeGrid(levelConfig.initialCopperCount, levelConfig.impurityCount),
+                selectedCell: null,
+                steps: MAX_STEPS,
+                score: 0,
+                combo: 0,
+                level,
+                items: initialItems,
+                targetMetal: levelConfig.targetMetal,
+                targetCount: levelConfig.targetCount,
+                currentTargetProgress: 0,
+                gameStatus: 'playing',
+                theme,
+                fastestTimes: {},
+                isAnimating: false,
+            };
+        }
+
+        function selectLevel(level) {
+            const savedData = loadGameData();
+            const theme = savedData?.selectedTheme || 'lava';
+            gameState = createInitialState(level, theme);
+            gameState.fastestTimes = savedData?.fastestTimes || {};
+            selectedItem = null;
+            render();
+        }
+
+        function changeTheme(theme) {
+            gameState.theme = theme;
+            const savedData = loadGameData();
+            saveGameData({ fastestTimes: gameState.fastestTimes, selectedTheme: theme });
+            render();
+        }
+
+        function handleCellClick(row, col) {
+            if (gameState.gameStatus !== 'playing' || gameState.isAnimating) return;
+
+            const clickedCell = gameState.grid[row][col];
+            const clickedPos = { row, col };
+
+            if (selectedItem) {
+                handleItemUse(clickedPos, clickedCell);
+                return;
+            }
+
+            if (clickedCell.type !== 'metal' || !clickedCell.metalType) return;
+
+            if (!gameState.selectedCell) {
+                gameState.selectedCell = clickedPos;
+                render();
+                return;
+            }
+
+            if (gameState.selectedCell.row === row && gameState.selectedCell.col === col) {
+                gameState.selectedCell = null;
+                render();
+                return;
+            }
+
+            if (!areAdjacent(gameState.selectedCell, clickedPos)) {
+                gameState.selectedCell = clickedPos;
+                render();
+                return;
+            }
+
+            const selectedCellData = gameState.grid[gameState.selectedCell.row][gameState.selectedCell.col];
+            if (selectedCellData.metalType !== clickedCell.metalType) {
+                gameState.selectedCell = clickedPos;
+                render();
+                return;
+            }
+
+            performSynthesis(gameState.selectedCell, clickedPos);
+        }
+
+        function performSynthesis(pos1, pos2) {
+            const cell1 = gameState.grid[pos1.row][pos1.col];
+            const cell2 = gameState.grid[pos2.row][pos2.col];
+
+            if (cell1.type !== 'metal' || cell2.type !== 'metal' || !cell1.metalType || !cell2.metalType) {
+                return;
+            }
+
+            const nextMetal = getNextMetalType(cell1.metalType);
+            if (!nextMetal) return;
+
+            createSparkEffect(pos1.row, pos1.col);
+
+            const newGrid = cloneGrid(gameState.grid);
+
+            const midRow = Math.floor((pos1.row + pos2.row) / 2);
+            const midCol = Math.floor((pos1.col + pos2.col) / 2);
+            newGrid[midRow][midCol] = createMetalCell(nextMetal);
+            newGrid[pos1.row][pos1.col] = createEmptyCell();
+            newGrid[pos2.row][pos2.col] = createEmptyCell();
+
+            let newProgress = gameState.currentTargetProgress;
+            if (nextMetal === gameState.targetMetal) {
+                newProgress += 1;
+            }
+
+            const newCombo = gameState.combo + 1;
+            const baseScore = METAL_INFO[nextMetal].level * 10;
+            const comboScore = baseScore * newCombo;
+            const newScore = gameState.score + comboScore;
+
+            showComboDisplay(newCombo);
+
+            gameState.grid = newGrid;
+            gameState.selectedCell = null;
+            gameState.steps = gameState.steps - 1;
+            gameState.score = newScore;
+            gameState.combo = newCombo;
+            gameState.currentTargetProgress = newProgress;
+            gameState.isAnimating = false;
+
+            if (newProgress >= gameState.targetCount) {
+                gameState.gameStatus = 'won';
+                updateFastestTime(gameState.level, gameState.steps);
+            } else if (gameState.steps <= 0) {
+                gameState.gameStatus = 'lost';
+            }
+
+            render();
+        }
+
+        function createSparkEffect(row, col) {
+            const gridEl = document.querySelector('.game-grid');
+            if (!gridEl) return;
+
+            const cellSize = gridEl.offsetWidth / GRID_SIZE;
+            const centerX = col * cellSize + cellSize / 2;
+            const centerY = row * cellSize + cellSize / 2;
+
+            for (let i = 0; i < 8; i++) {
+                const spark = document.createElement('div');
+                spark.className = 'spark';
+                spark.style.left = centerX + 'px';
+                spark.style.top = centerY + 'px';
+                const angle = (Math.PI * 2 * i) / 8;
+                const distance = 30 + Math.random() * 20;
+                spark.style.setProperty('--dx', Math.cos(angle) * distance + 'px');
+                spark.style.setProperty('--dy', Math.sin(angle) * distance + 'px');
+                gridEl.appendChild(spark);
+                setTimeout(() => spark.remove(), 500);
+            }
+        }
+
+        function showComboDisplay(combo) {
+            if (comboTimeout) clearTimeout(comboTimeout);
+            comboDisplay = combo;
+            render();
+            comboTimeout = setTimeout(() => {
+                comboDisplay = 0;
+                render();
+            }, 1000);
+        }
+
+        function handleItemUse(pos, cell) {
+            if (!selectedItem) return;
+
+            let newGrid = cloneGrid(gameState.grid);
+            let itemUsed = false;
+
+            switch (selectedItem) {
+                case 'speedMelt': {
+                    const pair = findSynthesizablePair(gameState.grid);
+                    if (pair) {
+                        const [pos1, pos2] = pair.pair;
+                        const cell1 = gameState.grid[pos1.row][pos1.col];
+                        const cell2 = gameState.grid[pos2.row][pos2.col];
+                        const nextMetal = getNextMetalType(cell1.metalType);
+
+                        if (nextMetal) {
+                            const midRow = Math.floor((pos1.row + pos2.row) / 2);
+                            const midCol = Math.floor((pos1.col + pos2.col) / 2);
+                            newGrid[midRow][midCol] = createMetalCell(nextMetal);
+                            newGrid[pos1.row][pos1.col] = createEmptyCell();
+                            newGrid[pos2.row][pos2.col] = createEmptyCell();
+                            itemUsed = true;
+
+                            let newProgress = gameState.currentTargetProgress;
+                            if (nextMetal === gameState.targetMetal) {
+                                newProgress += 1;
+                            }
+
+                            const newSteps = gameState.steps - 1;
+                            let newStatus = gameState.gameStatus;
+                            if (newProgress >= gameState.targetCount) {
+                                newStatus = 'won';
+                            } else if (newSteps <= 0) {
+                                newStatus = 'lost';
+                            }
+
+                            gameState.grid = newGrid;
+                            gameState.items = gameState.items.map(i =>
+                                i.type === 'speedMelt' ? { ...i, count: i.count - 1 } : i
+                            );
+                            gameState.selectedCell = null;
+                            gameState.steps = newSteps;
+                            gameState.combo = 0;
+                            gameState.currentTargetProgress = newProgress;
+                            gameState.gameStatus = newStatus;
+                        }
+                    }
+                    break;
+                }
+                case 'precision': {
+                    if (gameState.selectedCell && cell.type === 'metal') {
+                        const temp = newGrid[gameState.selectedCell.row][gameState.selectedCell.col];
+                        newGrid[gameState.selectedCell.row][gameState.selectedCell.col] = newGrid[pos.row][pos.col];
+                        newGrid[pos.row][pos.col] = temp;
+                        itemUsed = true;
+
+                        gameState.grid = newGrid;
+                        gameState.items = gameState.items.map(i =>
+                            i.type === 'precision' ? { ...i, count: i.count - 1 } : i
+                        );
+                        gameState.selectedCell = null;
+                        gameState.steps = gameState.steps - 1;
+                        gameState.combo = 0;
+                        gameState.gameStatus = gameState.steps <= 0 ? 'lost' : gameState.gameStatus;
+                    }
+                    break;
+                }
+                case 'shield': {
+                    for (let r = 0; r < GRID_SIZE; r++) {
+                        for (let c = 0; c < GRID_SIZE; c++) {
+                            if (newGrid[r][c].type === 'impurity') {
+                                newGrid[r][c] = createMetalCell('copper');
+                                itemUsed = true;
+                            }
+                        }
+                    }
+
+                    if (itemUsed) {
+                        gameState.grid = newGrid;
+                        gameState.items = gameState.items.map(i =>
+                            i.type === 'shield' ? { ...i, count: i.count - 1 } : i
+                        );
+                        gameState.selectedCell = null;
+                        gameState.steps = gameState.steps - 1;
+                        gameState.combo = 0;
+                        gameState.gameStatus = gameState.steps <= 0 ? 'lost' : gameState.gameStatus;
+                    }
+                    break;
+                }
+            }
+
+            selectedItem = null;
+            render();
+        }
+
+        function useItem(itemType) {
+            const item = gameState.items.find(i => i.type === itemType);
+            if (!item || item.count <= 0) return;
+            selectedItem = itemType;
+            render();
+        }
+
+        function cancelItem() {
+            selectedItem = null;
+            render();
+        }
+
+        function restartLevel() {
+            const savedData = loadGameData();
+            gameState = createInitialState(gameState.level, gameState.theme);
+            gameState.fastestTimes = savedData?.fastestTimes || {};
+            selectedItem = null;
+            render();
+        }
+
+        function nextLevel() {
+            if (gameState.level < 5) {
+                selectLevel(gameState.level + 1);
+            }
+        }
+
+        function getCellClass(cell, isSelected) {
+            let className = 'cell';
+            if (cell.type === 'metal') className += ' metal';
+            if (cell.type === 'impurity') className += ' impurity';
+            if (isSelected) className += ' selected';
+            return className;
+        }
+
+        function getCellStyle(cell, colors) {
+            if (cell.type === 'metal' && cell.metalType) {
+                return {
+                    background: `linear-gradient(135deg, ${colors.cell} 0%, ${METAL_INFO[cell.metalType].color}22 100%)`,
+                };
+            }
+            return {
+                background: colors.cell,
+            };
+        }
+
+        function renderCell(cell, row, col, colors) {
+            const isSelected = gameState.selectedCell?.row === row && gameState.selectedCell?.col === col;
+            const className = getCellClass(cell, isSelected);
+            const style = getCellStyle(cell, colors);
+
+            let content = '';
+            if (cell.type === 'metal' && cell.metalType) {
+                content = `
+                    <span class="metal-symbol" style="color: ${METAL_INFO[cell.metalType].color}">
+                        ${METAL_INFO[cell.metalType].symbol}
+                    </span>
+                    <span class="metal-name" style="color: ${colors.text}">
+                        ${METAL_INFO[cell.metalType].name}
+                    </span>
+                `;
+            } else if (cell.type === 'impurity') {
+                content = `<span class="metal-symbol" style="color: #666">✖</span>`;
+            }
+
+            return `
+                <div class="${className}" style="${Object.entries(style).map(([k,v]) => `${k}:${v}`).join(';')}" onclick="handleCellClick(${row}, ${col})">
+                    ${content}
+                </div>
+            `;
+        }
+
+        function renderGrid(colors) {
+            let html = '<div class="game-grid" style="background: ' + colors.gridLine + '">';
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    html += renderCell(gameState.grid[row][col], row, col, colors);
+                }
+            }
+            html += '</div>';
+            return html;
+        }
+
+        function renderItems(colors) {
+            let html = '<div class="items-bar">';
+            for (const item of gameState.items) {
+                const isDisabled = item.count <= 0;
+                const isSelected = selectedItem === item.type;
+                let className = 'item';
+                if (isDisabled) className += ' disabled';
+                if (isSelected) className += ' selected';
+                const borderColor = isSelected ? colors.highlight : colors.cellBorder;
+                const bgColor = isSelected ? colors.highlight + '22' : colors.cell;
+
+                html += `
+                    <div class="${className}" style="border-color: ${borderColor}; background: ${bgColor}" onclick="${!isDisabled ? `(${isSelected ? 'cancelItem' : 'useItem'})('${item.type}')` : ''}">
+                        <span class="item-icon">${item.icon}</span>
+                        <span class="item-count" style="color: ${colors.text}">x${item.count}</span>
+                        <span class="item-name" style="color: ${colors.text}">${item.name}</span>
+                    </div>
+                `;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        function renderStats(colors) {
+            const stepsColor = gameState.steps <= 5 ? '#ff4444' : colors.highlight;
+            return `
+                <div class="stats-bar" style="background: ${colors.cell}">
+                    <div class="stat">
+                        <div class="stat-label" style="color: ${colors.text}">步数</div>
+                        <div class="stat-value" style="color: ${stepsColor}">${gameState.steps}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label" style="color: ${colors.text}">分数</div>
+                        <div class="stat-value" style="color: ${colors.highlight}">${gameState.score}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label" style="color: ${colors.text}">连击</div>
+                        <div class="stat-value" style="color: ${gameState.combo > 0 ? '#00ff00' : colors.highlight}">${gameState.combo}x</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTarget(colors) {
+            const metalInfo = METAL_INFO[gameState.targetMetal];
+            return `
+                <div class="target-bar" style="background: ${colors.cell}">
+                    <div class="target-label" style="color: ${colors.text}">目标</div>
+                    <div class="target-progress">
+                        <span class="target-metal" style="background: ${metalInfo.color}33; color: ${metalInfo.color}; border: 2px solid ${metalInfo.color}">
+                            ${metalInfo.name} (${metalInfo.symbol})
+                        </span>
+                        <span style="color: ${colors.text}">${gameState.currentTargetProgress} / ${gameState.targetCount}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderLevels(colors) {
+            let html = '<div class="level-select">';
+            for (let i = 1; i <= 5; i++) {
+                const isCompleted = gameState.fastestTimes[i] !== undefined;
+                const isActive = gameState.level === i;
+                let className = 'level-btn';
+                if (isActive) className += ' active';
+                if (isCompleted) className += ' completed';
+                const borderColor = isActive ? colors.highlight : colors.gridLine;
+                const bgColor = isActive ? colors.highlight + '33' : colors.cell;
+
+                html += `
+                    <button class="${className}" style="border-color: ${borderColor}; color: ${colors.text}; background: ${bgColor}" onclick="selectLevel(${i})">
+                        ${i}
+                    </button>
+                `;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        function renderThemes(colors) {
+            let html = '<div class="themes-bar">';
+            for (const [key, theme] of Object.entries(THEMES)) {
+                const isActive = gameState.theme === key;
+                const borderColor = isActive ? colors.highlight : colors.gridLine;
+
+                html += `
+                    <button class="theme-btn ${isActive ? 'active' : ''}" style="border-color: ${borderColor}; color: ${colors.text}" onclick="changeTheme('${key}')">
+                        ${theme.name}
+                    </button>
+                `;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        function renderActions(colors) {
+            let html = '<div class="actions-bar">';
+            html += `
+                <button class="btn" style="border-color: ${colors.gridLine}; color: ${colors.text}" onclick="restartLevel()">
+                    重新开始
+                </button>
+            `;
+            if (gameState.level < 5 && gameState.gameStatus === 'won') {
+                html += `
+                    <button class="btn" style="border-color: ${colors.highlight}; color: ${colors.highlight}" onclick="nextLevel()">
+                        下一关
+                    </button>
+                `;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        function renderModal(colors) {
+            if (gameState.gameStatus !== 'won' && gameState.gameStatus !== 'lost') return '';
+
+            const isWon = gameState.gameStatus === 'won';
+            let html = `
+                <div class="modal-overlay">
+                    <div class="modal" style="background: ${colors.cell}; border-color: ${colors.highlight}">
+                        <div class="modal-title" style="color: ${colors.highlight}">
+                            ${isWon ? '锻造成功!' : '锻造失败'}
+                        </div>
+                        <div class="modal-text" style="color: ${colors.text}">
+                            第 ${gameState.level} 关
+                        </div>
+                        <div class="modal-score" style="color: ${colors.highlight}">
+                            分数: ${gameState.score}
+                        </div>
+            `;
+
+            if (isWon && gameState.fastestTimes[gameState.level]) {
+                html += `
+                    <div class="fastest-time">
+                        最快: ${gameState.fastestTimes[gameState.level]} 步
+                    </div>
+                `;
+            }
+
+            html += '<div class="modal-actions">';
+            html += `
+                <button class="btn" style="border-color: ${colors.gridLine}; color: ${colors.text}" onclick="restartLevel()">
+                    重新开始
+                </button>
+            `;
+
+            if (gameState.level < 5) {
+                html += `
+                    <button class="btn" style="border-color: ${colors.highlight}; color: ${colors.highlight}" onclick="nextLevel()">
+                        下一关
+                    </button>
+                `;
+            }
+
+            html += '</div></div></div>';
+            return html;
+        }
+
+        function renderComboDisplay(colors) {
+            if (comboDisplay <= 1) return '';
+            return `
+                <div class="combo-display" style="color: ${colors.highlight}; text-shadow: 0 0 20px ${colors.highlight}">
+                    ${comboDisplay}x Combo!
+                </div>
+            `;
+        }
+
+        function render() {
+            const colors = THEMES[gameState.theme].colors;
+            const containerClass = `game-container theme-${gameState.theme}`;
+            const metalInfo = METAL_INFO[gameState.targetMetal];
+
+            const html = `
+                <div class="${containerClass}" style="background: ${colors.background}; border-color: ${colors.gridLine}">
+                    <div class="game-header">
+                        <h1 class="game-title">熔炉锻造</h1>
+                        <div class="level-indicator" style="color: ${colors.text}">第 ${gameState.level} 关 / 共 5 关</div>
+                    </div>
+
+                    ${renderLevels(colors)}
+                    ${renderStats(colors)}
+                    ${renderGrid(colors)}
+                    ${renderTarget(colors)}
+                    ${renderItems(colors)}
+                    ${renderActions(colors)}
+                    ${renderThemes(colors)}
+                    ${renderComboDisplay(colors)}
+                    ${renderModal(colors)}
+                </div>
+            `;
+
+            document.getElementById('app').innerHTML = html;
+        }
+
+        function init() {
+            const savedData = loadGameData();
+            const theme = savedData?.selectedTheme || 'lava';
+            gameState = createInitialState(1, theme);
+            gameState.fastestTimes = savedData?.fastestTimes || {};
+            selectedItem = null;
+            render();
+        }
+
+        window.handleCellClick = handleCellClick;
+        window.selectLevel = selectLevel;
+        window.changeTheme = changeTheme;
+        window.useItem = useItem;
+        window.cancelItem = cancelItem;
+        window.restartLevel = restartLevel;
+        window.nextLevel = nextLevel;
+
+        init();
+    </script>
+</body>
+</html>
